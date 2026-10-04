@@ -1,0 +1,53 @@
+name: PSScriptAnalyzer
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint PowerShell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          if ($results) {
+              $results | Sort-Object Severity, ScriptName, Line |
+                  Format-Table -Property Severity, ScriptName, Line, RuleName, Message -AutoSize |
+                  Out-String -Width 220 | Write-Host
+          }
+          else {
+              Write-Host 'PSScriptAnalyzer found no issues.'
+          }
+          $errors = @($results | Where-Object { $_.Severity -eq 'Error' })
+          if ($errors.Count -gt 0) {
+              throw "PSScriptAnalyzer reported $($errors.Count) error(s)."
+          }
+
+      - name: Verify every script has comment-based help
+        shell: pwsh
+        run: |
+          $missing = Get-ChildItem -Path . -Filter *.ps1 -Recurse |
+              Where-Object { -not (Select-String -Path $_.FullName -Pattern '^\s*\.SYNOPSIS' -Quiet) }
+          if ($missing) {
+              $missing | ForEach-Object { Write-Host "Missing .SYNOPSIS: $($_.FullName)" }
+              throw "$(@($missing).Count) script(s) have no comment-based help."
+          }
+          Write-Host 'All scripts carry comment-based help.'
