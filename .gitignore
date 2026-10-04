@@ -1,0 +1,29 @@
+# Script output (reports and backups are generated locally, never committed)
+Reports/
+IntuneBackup_*/
+CABackup_*/
+*Export_*/
+*Backup_*/
+*Snapshot_*/
+M365UsageReports_*/
+EntraCustomRoles_*/
+*.csv
+*.log
+*.tmp
+
+# Secrets and local settings - never commit these
+*.pfx
+*.cer
+*.key
+*.env
+appsettings.local.json
+
+# Editors / OS noise
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Archives
+*.zip
